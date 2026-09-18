@@ -11,6 +11,7 @@ Gerekli ortam değişkenleri (GitHub Secrets üzerinden gelir):
 
 import os
 import sys
+import time
 import traceback
 from urllib.parse import quote
 
@@ -213,9 +214,22 @@ def process_route(route):
     )
 
     try:
-        direct_price, connecting_price, currency = fetch_prices(route)
+        direct_price = connecting_price = currency = None
+        last_error = None
+        for attempt in range(3):
+            try:
+                direct_price, connecting_price, currency = fetch_prices(route)
+                last_error = None
+                break
+            except Exception as e:
+                last_error = e
+                print(f"[#{route_id}] Deneme {attempt + 1}/3 başarısız: {e}")
+                if attempt < 2:
+                    time.sleep(8)
+        if last_error is not None:
+            raise last_error
     except Exception as e:
-        print(f"[#{route_id}] Fiyat çekilemedi: {e}")
+        print(f"[#{route_id}] Fiyat çekilemedi (3 denemenin hepsi başarısız): {e}")
         update_route(route_id, {"last_error": str(e)[:500], "last_checked_at": "now()"})
         return
 
