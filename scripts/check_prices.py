@@ -202,10 +202,12 @@ def _handle_category(route, chat_id, trip_desc, currency, label, price, lowest, 
         )
     elif price < float(lowest):
         fields[field_name] = price
+        delta = float(lowest) - price
+        pct = (delta / float(lowest)) * 100 if float(lowest) else 0
         print(f"[#{route_id}] {label} fiyat düştü: {lowest} -> {price} {currency}")
         send_telegram_message(
             chat_id,
-            f"🔔 Fiyat düştü! ({label})\n{trip_desc}\nÖnceki en düşük: {format_price(lowest)} {currency}\nYeni {price_label}: {format_price(price)} {currency}\n\n🔗 Doğrula ve satın al: {link}",
+            f"🔔 Fiyat düştü! ({label})\n{trip_desc}\nÖnceki en düşük: {format_price(lowest)} {currency}\nYeni {price_label}: {format_price(price)} {currency}\n📉 -{format_price(delta)} {currency} (%{pct:.1f} düşüş)\n\n🔗 Doğrula ve satın al: {link}",
         )
     else:
         print(f"[#{route_id}] {label}: değişiklik yok: {price} {currency} (en düşük: {lowest})")
