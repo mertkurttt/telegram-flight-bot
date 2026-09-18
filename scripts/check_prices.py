@@ -12,18 +12,23 @@ Gerekli ortam değişkenleri (GitHub Secrets üzerinden gelir):
 import os
 import sys
 import traceback
+from urllib.parse import quote
 
 import requests
 from fast_flights import FlightData, Passengers, get_flights
 
-# fast-flights'ın iç fetch fonksiyonuna "yama" yaparak Google'ın AB bölgesi
-# "kullanım şartlarını kabul et" sayfasına takılmayı önlüyoruz (resmi API bunu
-# desteklemiyor, bu yüzden kütüphanenin içine doğrudan giriyoruz).
+CURRENCY = "TRY"  # Fiyatlar Türk Lirası olarak istenir
+
+# fast-flights'ın iç fetch fonksiyonuna "yama" yaparak iki şey yapıyoruz:
+# 1) Google'ın AB bölgesi "kullanım şartlarını kabul et" sayfasına takılmayı önlüyoruz
+# 2) Fiyatların Türk Lirası (TRY) cinsinden gelmesini sağlıyoruz
+# (resmi API bunları desteklemiyor, bu yüzden kütüphanenin içine doğrudan giriyoruz)
 import fast_flights.core as _ff_core
 from fast_flights.primp import Client as _PrimpClient
 
 
 def _fetch_with_consent(params, timeout: int = 30):
+    params = {**params, "curr": CURRENCY}
     client = _PrimpClient(
         impersonate="chrome_126",
         verify=False,
@@ -104,6 +109,18 @@ def _parse_price(raw_price):
         return None
 
 
+def build_google_flights_link(route):
+    """Kullanıcının fiyatı kendi gözüyle doğrulayıp bilet alabileceği Google Flights linki."""
+    if route.get("return_date"):
+        query = (
+            f"Flights from {route['origin']} to {route['destination']} "
+            f"on {route['depart_date']} through {route['return_date']}"
+        )
+    else:
+        query = f"Flights from {route['origin']} to {route['destination']} on {route['depart_date']}"
+    return "https://www.google.com/travel/flights?q=" + quote(query)
+
+
 def fetch_prices(route):
     """fast-flights ile Google Flights'tan fiyatları çeker.
     Direkt ve aktarmalı uçuşların en ucuzunu ayrı ayrı döner.
@@ -152,7 +169,7 @@ def fetch_prices(route):
     if not direct_prices and not connecting_prices:
         raise ValueError("Sonuçlarda geçerli bir fiyat bulunamadı")
 
-    currency = route.get("currency") or "USD"
+    currency = CURRENCY
     return (
         min(direct_prices) if direct_prices else None,
         min(connecting_prices) if connecting_prices else None,
@@ -160,7 +177,7 @@ def fetch_prices(route):
     )
 
 
-def _handle_category(route, chat_id, trip_desc, currency, label, price, lowest, field_name, fields):
+def _handle_category(route, chat_id, trip_desc, currency, label, price, lowest, field_name, fields, link):
     """Bir kategori (direkt/aktarmalı) için: geçmişe kaydet, düşüş varsa bildir, fields'ı güncelle."""
     route_id = route["id"]
     if price is None:
@@ -168,19 +185,21 @@ def _handle_category(route, chat_id, trip_desc, currency, label, price, lowest, 
 
     insert_price_history(route_id, price, currency, is_direct=(field_name == "lowest_price_direct"))
 
+    price_label = "toplam (gidiş-dönüş)" if route.get("return_date") else "fiyat"
+
     if lowest is None:
         fields[field_name] = price
         print(f"[#{route_id}] İlk {label} fiyatı kaydedildi: {price} {currency}")
         send_telegram_message(
             chat_id,
-            f"📌 Takip başladı ({label})\n{trip_desc}\nİlk görülen fiyat: {price} {currency}",
+            f"📌 Takip başladı ({label})\n{trip_desc}\nİlk görülen {price_label}: {price} {currency}\n\n🔗 Doğrula ve satın al: {link}",
         )
     elif price < float(lowest):
         fields[field_name] = price
         print(f"[#{route_id}] {label} fiyat düştü: {lowest} -> {price} {currency}")
         send_telegram_message(
             chat_id,
-            f"🔔 Fiyat düştü! ({label})\n{trip_desc}\nÖnceki en düşük: {lowest} {currency}\nYeni fiyat: {price} {currency}",
+            f"🔔 Fiyat düştü! ({label})\n{trip_desc}\nÖnceki en düşük: {lowest} {currency}\nYeni {price_label}: {price} {currency}\n\n🔗 Doğrula ve satın al: {link}",
         )
     else:
         print(f"[#{route_id}] {label}: değişiklik yok: {price} {currency} (en düşük: {lowest})")
@@ -201,14 +220,15 @@ def process_route(route):
         return
 
     fields = {"last_checked_at": "now()", "last_error": None}
+    link = build_google_flights_link(route)
 
     _handle_category(
         route, chat_id, trip_desc, currency, "direkt",
-        direct_price, route.get("lowest_price_direct"), "lowest_price_direct", fields,
+        direct_price, route.get("lowest_price_direct"), "lowest_price_direct", fields, link,
     )
     _handle_category(
         route, chat_id, trip_desc, currency, "aktarmalı",
-        connecting_price, route.get("lowest_price_connecting"), "lowest_price_connecting", fields,
+        connecting_price, route.get("lowest_price_connecting"), "lowest_price_connecting", fields, link,
     )
 
     update_route(route_id, fields)
