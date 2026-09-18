@@ -1,0 +1,28 @@
+name: Uçuş Fiyat Kontrolü
+
+on:
+  schedule:
+    - cron: "0 * * * *" # her saat başı
+  workflow_dispatch: {} # GitHub üzerinden "Run workflow" ile elle de tetiklenebilir
+
+jobs:
+  check-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodu indir
+        uses: actions/checkout@v4
+
+      - name: Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Bağımlılıkları kur
+        run: pip install -r requirements.txt
+
+      - name: Fiyatları kontrol et
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: python scripts/check_prices.py
