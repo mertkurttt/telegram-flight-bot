@@ -28,7 +28,7 @@ from fast_flights.primp import Client as _PrimpClient
 
 
 def _fetch_with_consent(params, timeout: int = 30):
-    params = {**params, "curr": CURRENCY, "sort": "2"}  # sort=2 -> Google'ın "En ucuz" sıralaması
+    params = {**params, "curr": CURRENCY}  # Google'ın "En iyi" listesindeki en düşük fiyatı kullanıyoruz
     client = _PrimpClient(
         impersonate="chrome_126",
         verify=False,
@@ -185,7 +185,7 @@ def _handle_category(route, chat_id, trip_desc, currency, label, price, lowest, 
 
     insert_price_history(route_id, price, currency, is_direct=(field_name == "lowest_price_direct"))
 
-    price_label = "toplam (gidiş-dönüş)" if route.get("return_date") else "fiyat"
+    price_label = "toplam (gidiş-dönüş, Google'ın 'En iyi' listesine göre)" if route.get("return_date") else "fiyat (Google'ın 'En iyi' listesine göre)"
 
     if lowest is None:
         fields[field_name] = price
