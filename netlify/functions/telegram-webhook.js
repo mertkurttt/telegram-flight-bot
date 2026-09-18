@@ -106,6 +106,10 @@ async function handleEkle(chatId, args) {
   );
 }
 
+function formatPrice(price) {
+  return Math.round(price).toLocaleString("tr-TR");
+}
+
 async function handleListele(chatId) {
   const routes = await supabaseRequest(
     `routes?chat_id=eq.${chatId}&active=eq.true&order=created_at.desc`
@@ -121,10 +125,10 @@ async function handleListele(chatId) {
       ? `${r.origin} → ${r.destination} (${r.depart_date} / ${r.return_date})`
       : `${r.origin} → ${r.destination} (${r.depart_date}, tek yön)`;
     const directPrice = r.lowest_price_direct
-      ? `${r.lowest_price_direct} ${r.currency}`
+      ? `${formatPrice(r.lowest_price_direct)} ${r.currency}`
       : "henüz görülmedi";
     const connectingPrice = r.lowest_price_connecting
-      ? `${r.lowest_price_connecting} ${r.currency}`
+      ? `${formatPrice(r.lowest_price_connecting)} ${r.currency}`
       : "henüz görülmedi";
     const errorNote = r.last_error ? `\n   ⚠️ Son kontrolde hata: ${r.last_error}` : "";
     return (
