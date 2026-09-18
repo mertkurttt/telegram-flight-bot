@@ -16,6 +16,27 @@ import traceback
 import requests
 from fast_flights import FlightData, Passengers, get_flights
 
+# fast-flights'ın iç fetch fonksiyonuna "yama" yaparak Google'ın AB bölgesi
+# "kullanım şartlarını kabul et" sayfasına takılmayı önlüyoruz (resmi API bunu
+# desteklemiyor, bu yüzden kütüphanenin içine doğrudan giriyoruz).
+import fast_flights.core as _ff_core
+from fast_flights.primp import Client as _PrimpClient
+
+
+def _fetch_with_consent(params, timeout: int = 30):
+    client = _PrimpClient(
+        impersonate="chrome_126",
+        verify=False,
+        timeout=timeout,
+        cookies={"CONSENT": "YES+"},
+    )
+    res = client.get("https://www.google.com/travel/flights", params=params)
+    assert res.status_code == 200, f"{res.status_code} Result: {res.text_markdown}"
+    return res
+
+
+_ff_core.fetch = _fetch_with_consent
+
 SUPABASE_URL = os.environ["SUPABASE_URL"].rstrip("/")
 SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
@@ -112,7 +133,6 @@ def fetch_prices(route):
         trip=trip,
         seat="economy",
         passengers=Passengers(adults=1, children=0, infants_in_seat=0, infants_on_lap=0),
-        cookies={"CONSENT": "YES+"},  # Google'ın AB bölgesi "onay" sayfasına takılmamak için
     )
 
     direct_prices = []
