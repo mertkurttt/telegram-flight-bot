@@ -28,7 +28,7 @@ from fast_flights.primp import Client as _PrimpClient
 
 
 def _fetch_with_consent(params, timeout: int = 30):
-    params = {**params, "curr": CURRENCY}
+params = {**params, "curr": CURRENCY, "sort": 2}  # sort=2 -> Google'ın "En ucuz" sıralaması
     client = _PrimpClient(
         impersonate="chrome_126",
         verify=False,
