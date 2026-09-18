@@ -112,6 +112,7 @@ def fetch_prices(route):
         trip=trip,
         seat="economy",
         passengers=Passengers(adults=1, children=0, infants_in_seat=0, infants_on_lap=0),
+        cookies={"CONSENT": "YES+"},  # Google'ın AB bölgesi "onay" sayfasına takılmamak için
     )
 
     direct_prices = []
