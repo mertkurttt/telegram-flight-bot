@@ -99,6 +99,11 @@ def insert_price_history(route_id, price, currency, is_direct):
     resp.raise_for_status()
 
 
+def format_price(price):
+    """Sayıyı '12.575' gibi binlik ayraçlı gösterir (ondalık yok, en yakın tam sayıya yuvarlar)."""
+    return f"{round(price):,}".replace(",", ".")
+
+
 def _parse_price(raw_price):
     price_str = str(raw_price).replace(",", "").strip()
     digits = "".join(ch for ch in price_str if ch.isdigit() or ch == ".")
@@ -193,14 +198,14 @@ def _handle_category(route, chat_id, trip_desc, currency, label, price, lowest, 
         print(f"[#{route_id}] İlk {label} fiyatı kaydedildi: {price} {currency}")
         send_telegram_message(
             chat_id,
-            f"📌 Takip başladı ({label})\n{trip_desc}\nİlk görülen {price_label}: {price} {currency}\n\n🔗 Doğrula ve satın al: {link}",
+            f"📌 Takip başladı ({label})\n{trip_desc}\nİlk görülen {price_label}: {format_price(price)} {currency}\n\n🔗 Doğrula ve satın al: {link}",
         )
     elif price < float(lowest):
         fields[field_name] = price
         print(f"[#{route_id}] {label} fiyat düştü: {lowest} -> {price} {currency}")
         send_telegram_message(
             chat_id,
-            f"🔔 Fiyat düştü! ({label})\n{trip_desc}\nÖnceki en düşük: {lowest} {currency}\nYeni {price_label}: {price} {currency}\n\n🔗 Doğrula ve satın al: {link}",
+            f"🔔 Fiyat düştü! ({label})\n{trip_desc}\nÖnceki en düşük: {format_price(lowest)} {currency}\nYeni {price_label}: {format_price(price)} {currency}\n\n🔗 Doğrula ve satın al: {link}",
         )
     else:
         print(f"[#{route_id}] {label}: değişiklik yok: {price} {currency} (en düşük: {lowest})")
