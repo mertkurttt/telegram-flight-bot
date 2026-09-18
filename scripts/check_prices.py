@@ -219,7 +219,7 @@ def process_route(route):
         update_route(route_id, {"last_error": str(e)[:500], "last_checked_at": "now()"})
         return
 
-    fields = {"last_checked_at": "now()", "last_error": None}
+    fields = {"last_checked_at": "now()", "last_error": None, "currency": currency}
     link = build_google_flights_link(route)
 
     _handle_category(
