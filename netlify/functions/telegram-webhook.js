@@ -110,6 +110,17 @@ function formatPrice(price) {
   return Math.round(price).toLocaleString("tr-TR");
 }
 
+function timeAgo(isoString) {
+  if (!isoString) return "henüz kontrol edilmedi";
+  const diffMin = Math.floor((Date.now() - new Date(isoString).getTime()) / 60000);
+  if (diffMin < 1) return "az önce";
+  if (diffMin < 60) return `${diffMin} dakika önce`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour} saat önce`;
+  const diffDay = Math.floor(diffHour / 24);
+  return `${diffDay} gün önce`;
+}
+
 async function handleListele(chatId) {
   const routes = await supabaseRequest(
     `routes?chat_id=eq.${chatId}&active=eq.true&order=created_at.desc`
@@ -130,11 +141,13 @@ async function handleListele(chatId) {
     const connectingPrice = r.lowest_price_connecting
       ? `${formatPrice(r.lowest_price_connecting)} ${r.currency}`
       : "henüz görülmedi";
+    const lastChecked = timeAgo(r.last_checked_at);
     const errorNote = r.last_error ? `\n   ⚠️ Son kontrolde hata: ${r.last_error}` : "";
     return (
       `#${r.id} — ${trip}\n` +
       `   ✈️ Direkt en düşük: ${directPrice}\n` +
-      `   🔀 Aktarmalı en düşük: ${connectingPrice}${errorNote}`
+      `   🔀 Aktarmalı en düşük: ${connectingPrice}\n` +
+      `   🕐 Son kontrol: ${lastChecked}${errorNote}`
     );
   });
 
