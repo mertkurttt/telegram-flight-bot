@@ -14,7 +14,7 @@ import sys
 import traceback
 
 import requests
-from fast_flights import FlightData, Passengers, create_filter, get_flights
+from fast_flights import FlightData, Passengers, get_flights
 
 SUPABASE_URL = os.environ["SUPABASE_URL"].rstrip("/")
 SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
@@ -107,14 +107,12 @@ def fetch_prices(route):
         )
         trip = "round-trip"
 
-    # max_stops belirtmiyoruz ki hem direkt hem aktarmalı sonuçlar birlikte gelsin
-    filter_ = create_filter(
+    result = get_flights(
         flight_data=flight_legs,
         trip=trip,
         seat="economy",
         passengers=Passengers(adults=1, children=0, infants_in_seat=0, infants_on_lap=0),
     )
-    result = get_flights(filter_)
 
     direct_prices = []
     connecting_prices = []
